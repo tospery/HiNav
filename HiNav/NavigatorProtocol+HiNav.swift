@@ -1,5 +1,5 @@
 //
-//  NavigatorProtocol+Router.swift
+//  NavigatorProtocol+HiNav.swift
 //  HiIOS
 //
 //  Created by liaoya on 2022/7/19.
