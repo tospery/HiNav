@@ -56,23 +56,23 @@ public enum OpenType: Int {
     case home
     
     static let allHosts = [
-        Router.Host.toast,
-        Router.Host.alert,
-        Router.Host.sheet,
-        Router.Host.popup,
-        Router.Host.login,
-        Router.Host.home
+        HiNav.Host.toast,
+        HiNav.Host.alert,
+        HiNav.Host.sheet,
+        HiNav.Host.popup,
+        HiNav.Host.login,
+        HiNav.Host.home
     ]
 }
 
-public protocol RouterCompatible {
+public protocol HiNavCompatible {
     
     func isLogined() -> Bool
     
-    func isLegalHost(host: Router.Host) -> Bool
-    func allowedPaths(host: Router.Host) -> [Router.Path]
+    func isLegalHost(host: HiNav.Host) -> Bool
+    func allowedPaths(host: HiNav.Host) -> [HiNav.Path]
     
-    func needLogin(host: Router.Host, path: Router.Path?) -> Bool
+    func needLogin(host: HiNav.Host, path: HiNav.Path?) -> Bool
 //    func customLogin(_ provider: HiCore.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
     
     func customHome(_ provider: HiCore.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
@@ -101,12 +101,12 @@ public protocol RouterCompatible {
 //    }
 //}
 
-final public class Router {
+final public class HiNav {
 
     public typealias Host = String
     public typealias Path = String
     
-    public static var shared = Router()
+    public static var shared = HiNav()
     
     init() {
     }
@@ -117,7 +117,7 @@ final public class Router {
         self.buildinBack(provider, navigator)
         self.buildinHome(provider, navigator)
         self.buildinLogin(provider, navigator)
-        if let compatible = self as? RouterCompatible {
+        if let compatible = self as? HiNavCompatible {
             compatible.web(provider, navigator)
             compatible.page(provider, navigator)
             compatible.open(provider, navigator)
@@ -127,7 +127,7 @@ final public class Router {
     func buildinMatch(_ provider: HiCore.ProviderProtocol, _ navigator: NavigatorProtocol) {
         (navigator as? Navigator)?.matcher.valueConverters["type"] = { [weak self] pathComponents, index in
             guard let `self` = self else { return nil }
-            if let compatible = self as? RouterCompatible {
+            if let compatible = self as? HiNavCompatible {
                 let host = pathComponents[0]
                 if compatible.isLegalHost(host: host) {
                     let path = pathComponents[index]
@@ -163,7 +163,7 @@ final public class Router {
                     if let vc = result as? UIViewController {
                         return vc
                     }
-                    if let compatible = self as? RouterCompatible {
+                    if let compatible = self as? HiNavCompatible {
                         let result = compatible.webToNative(provider, navigator, myURL, native, context)
                         if let rt = result as? Bool, rt {
                             return nil
@@ -175,7 +175,7 @@ final public class Router {
                 }
             }
             // (2) 网页跳转
-            if let compatible = self as? RouterCompatible {
+            if let compatible = self as? HiNavCompatible {
                 return compatible.webViewController(provider, navigator, paramters)
             }
             return nil
@@ -223,7 +223,7 @@ final public class Router {
     
     func buildinHome(_ provider: HiCore.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .home)) { url, values, context in
-            if let compatible = self as? RouterCompatible {
+            if let compatible = self as? HiNavCompatible {
                 return compatible.customHome(provider, navigator, url, values, context)
             }
             return false
@@ -232,7 +232,7 @@ final public class Router {
     
     func buildinLogin(_ provider: HiCore.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .login)) { url, values, context in
-            if let compatible = self as? RouterCompatible {
+            if let compatible = self as? HiNavCompatible {
                 return compatible.customLogin(provider, navigator, url, values, context)
             }
             return false
@@ -263,14 +263,14 @@ final public class Router {
         // 4. 标题
         parameters[Parameter.title] = parameters.string(for: Parameter.title)
 //        var title: String? = nil
-//        if let compatible = self as? RouterCompatible {
+//        if let compatible = self as? HiNavCompatible {
 //            title = compatible.title(host: host, path: path)
 //        }
 //        parameters[Parameter.title] = parameters.string(for: Parameter.title) ?? title
         // 5. 刷新/加载
 //        var shouldRefresh = false
 //        var shouldLoadMore = false
-//        if let compatible = self as? RouterCompatible {
+//        if let compatible = self as? HiNavCompatible {
 //            shouldRefresh = compatible.shouldRefresh(host: host, path: path)
 //            shouldLoadMore = compatible.shouldLoadMore(host: host, path: path)
 //        }
@@ -285,7 +285,7 @@ final public class Router {
     /// 对于详情页，如app://user/detail采用<id>匹配模式
     /// 此时，需要注册两个patter，分别为app://user/42980和app://user
     /// 前者用于跳转到指定用户的详情页，后者用户跳转到当前登录用户的详情页
-    public func urlPattern(host: Router.Host, path: Path? = nil, placeholder: String? = nil) -> String {
+    public func urlPattern(host: HiNav.Host, path: Path? = nil, placeholder: String? = nil) -> String {
         var url = "\(UIApplication.shared.urlScheme)://\(host)"
         if let path = path {
             url += "/\(path)"
@@ -296,7 +296,7 @@ final public class Router {
         return url
     }
     
-    public func urlString(host: Router.Host, path: Path? = nil, parameters: [String: String]? = nil) -> String {
+    public func urlString(host: HiNav.Host, path: Path? = nil, parameters: [String: String]? = nil) -> String {
         var url = "\(UIApplication.shared.urlScheme)://\(host)".url!
         if let path = path {
             url.appendPathComponent(path)
@@ -309,32 +309,32 @@ final public class Router {
 
 }
 
-extension Router.Host {
+extension HiNav.Host {
     /// 返回上一级（包括退回或者关闭）
-    public static var back: Router.Host { "back" }
+    public static var back: HiNav.Host { "back" }
     /// 弹窗分为两类（自动关闭的toast和手动关闭的）
-    public static var toast: Router.Host { "toast" }
-    public static var alert: Router.Host { "alert" }
-    public static var sheet: Router.Host { "sheet" }
-    public static var popup: Router.Host { "popup" }
+    public static var toast: HiNav.Host { "toast" }
+    public static var alert: HiNav.Host { "alert" }
+    public static var sheet: HiNav.Host { "sheet" }
+    public static var popup: HiNav.Host { "popup" }
     
-    public static var dashboard: Router.Host { "dashboard" }
-    public static var personal: Router.Host { "personal" }
+    public static var dashboard: HiNav.Host { "dashboard" }
+    public static var personal: HiNav.Host { "personal" }
     
-    public static var home: Router.Host { "home" }
-    public static var login: Router.Host { "login" }
-    public static var user: Router.Host { "user" }
-    public static var custom: Router.Host { "custom" }
-    public static var profile: Router.Host { "profile" }
-    public static var settings: Router.Host { "settings" }
-    public static var about: Router.Host { "about" }
-    public static var search: Router.Host { "search" }
+    public static var home: HiNav.Host { "home" }
+    public static var login: HiNav.Host { "login" }
+    public static var user: HiNav.Host { "user" }
+    public static var custom: HiNav.Host { "custom" }
+    public static var profile: HiNav.Host { "profile" }
+    public static var settings: HiNav.Host { "settings" }
+    public static var about: HiNav.Host { "about" }
+    public static var search: HiNav.Host { "search" }
 }
 
-extension Router.Path {
-    public static var page: Router.Path { "page" }
-    public static var list: Router.Path { "list" }
-    public static var detail: Router.Path { "detail" }
-    public static var history: Router.Path { "history" }
+extension HiNav.Path {
+    public static var page: HiNav.Path { "page" }
+    public static var list: HiNav.Path { "list" }
+    public static var detail: HiNav.Path { "detail" }
+    public static var history: HiNav.Path { "history" }
 }
 

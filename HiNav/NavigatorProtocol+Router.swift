@@ -128,7 +128,7 @@ public extension NavigatorProtocol {
         ctx[Parameter.jumpType] = JumpType.forward.rawValue
         ctx[Parameter.forwardType] = ForwardType.open.rawValue
         ctx[Parameter.openType] = OpenType.toast.rawValue
-        self.jump(Router.shared.urlString(host: .toast, parameters: parameters), context: ctx)
+        self.jump(HiNav.shared.urlString(host: .toast, parameters: parameters), context: ctx)
     }
     
     func showToastActivity(active: Bool = true) {
@@ -138,7 +138,7 @@ public extension NavigatorProtocol {
         ctx[Parameter.jumpType] = JumpType.forward.rawValue
         ctx[Parameter.forwardType] = ForwardType.open.rawValue
         ctx[Parameter.openType] = OpenType.toast.rawValue
-        self.jump(Router.shared.urlString(host: .toast, parameters: parameters), context: ctx)
+        self.jump(HiNav.shared.urlString(host: .toast, parameters: parameters), context: ctx)
     }
     
     func hideToastActivity() {
@@ -149,52 +149,52 @@ public extension NavigatorProtocol {
     @discardableResult
     func alert(_ title: String, _ message: String, _ actions: [AlertActionType]) -> Bool {
         let info = self.infoForAlert(title, message, actions)
-        return self.jump(Router.shared.urlString(host: .alert, parameters: info.0), context: info.1) as? Bool ?? false
+        return self.jump(HiNav.shared.urlString(host: .alert, parameters: info.0), context: info.1) as? Bool ?? false
     }
 
     func rxAlert(_ title: String, _ message: String, _ actions: [AlertActionType]) -> Observable<Any> {
         let info = self.infoForAlert(title, message, actions)
-        return self.rxJump(Router.shared.urlString(host: .alert, parameters: info.0), context: info.1)
+        return self.rxJump(HiNav.shared.urlString(host: .alert, parameters: info.0), context: info.1)
     }
     
     // MARK: sheet
     @discardableResult
     func sheet(_ title: String?, _ message: String?, _ actions: [AlertActionType]) -> Bool {
         let info = self.infoForSheet(title, message, actions)
-        return self.jump(Router.shared.urlString(host: .sheet, parameters: info.0), context: info.1) as? Bool ?? false
+        return self.jump(HiNav.shared.urlString(host: .sheet, parameters: info.0), context: info.1) as? Bool ?? false
     }
 
     func rxSheet(_ title: String?, _ message: String?, _ actions: [AlertActionType]) -> Observable<Any> {
         let info = self.infoForSheet(title, message, actions)
-        return self.rxJump(Router.shared.urlString(host: .sheet, parameters: info.0), context: info.1)
+        return self.rxJump(HiNav.shared.urlString(host: .sheet, parameters: info.0), context: info.1)
     }
     
     // MARK: popup
     @discardableResult
-    func popup(_ path: Router.Path, context: Any? = nil) -> Bool {
-        self.jump(Router.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context)) as? Bool ?? false
+    func popup(_ path: HiNav.Path, context: Any? = nil) -> Bool {
+        self.jump(HiNav.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context)) as? Bool ?? false
     }
     
-    func rxPopup(_ path: Router.Path, context: Any? = nil) -> Observable<Any> {
-        self.rxJump(Router.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context))
+    func rxPopup(_ path: HiNav.Path, context: Any? = nil) -> Observable<Any> {
+        self.rxJump(HiNav.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context))
     }
     
     // MARK: login
     func login() {
-        self.jump(Router.shared.urlString(host: .login), context: self.contextForLogin())
+        self.jump(HiNav.shared.urlString(host: .login), context: self.contextForLogin())
     }
     
     func rxLogin() -> Observable<Any> {
-        self.rxJump(Router.shared.urlString(host: .login), context: self.contextForLogin())
+        self.rxJump(HiNav.shared.urlString(host: .login), context: self.contextForLogin())
     }
 
     // MARK: back
     func back(type: BackType? = nil, animated: Bool = true, message: String? = nil) {
-        self.jump(Router.shared.urlString(host: .back), context: self.contextForBack(type: type, animated: animated, message: message))
+        self.jump(HiNav.shared.urlString(host: .back), context: self.contextForBack(type: type, animated: animated, message: message))
     }
     
     func rxBack(type: BackType? = nil, animated: Bool = true, message: String? = nil) -> Observable<Any> {
-        self.rxJump(Router.shared.urlString(host: .back), context: self.contextForBack(type: type, animated: animated, message: message))
+        self.rxJump(HiNav.shared.urlString(host: .back), context: self.contextForBack(type: type, animated: animated, message: message))
     }
     
     // MARK: - Private
@@ -237,8 +237,8 @@ public extension NavigatorProtocol {
         guard let host = url.host, host != .back, !OpenType.allHosts.contains(host) else { return false }
         var needLogin = false
         var isLogined = true
-        let router = Router.shared
-        if let compatible = router as? RouterCompatible {
+        let router = HiNav.shared
+        if let compatible = router as? HiNavCompatible {
             isLogined = compatible.isLogined()
             if compatible.needLogin(host: host, path: url.path) {
                 needLogin = true
@@ -257,7 +257,7 @@ public extension NavigatorProtocol {
                 }, onCompleted: {
                     logger.print("自动跳转登录页(完成)", module: .hiIOS)
                     var hasLogined = false
-                    if let compatible = router as? RouterCompatible {
+                    if let compatible = router as? HiNavCompatible {
                         hasLogined = compatible.isLogined()
                     }
                     if hasLogined {
