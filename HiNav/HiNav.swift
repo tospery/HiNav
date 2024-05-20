@@ -8,6 +8,7 @@
 import Foundation
 import RxSwift
 import URLNavigator_Hi
+import HiDomain
 import HiCore
 
 /// 导航的分类
@@ -63,6 +64,10 @@ public enum OpenType: Int {
         HiNav.Host.login,
         HiNav.Host.home
     ]
+}
+
+public enum HiNavError: Error {
+    case navigation
 }
 
 public protocol HiNavCompatible {

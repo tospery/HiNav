@@ -9,7 +9,7 @@ import UIKit
 import RxSwift
 import URLNavigator_Hi
 import SwifterSwift
-import HiCore
+import HiDomain
 
 extension Navigator: ReactiveCompatible { }
 public extension Reactive where Base: Navigator {
@@ -41,7 +41,7 @@ public extension Reactive where Base: Navigator {
                 success = true
             }
             if !success {
-                observer.onError(HiError.navigation)
+                observer.onError(HiNavError.navigation)
             }
             return Disposables.create { }
         }

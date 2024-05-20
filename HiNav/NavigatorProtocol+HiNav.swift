@@ -9,6 +9,7 @@ import Foundation
 import RxSwift
 import URLNavigator_Hi
 import SwifterSwift
+import HiDomain
 import HiCore
 
 var navigateBag = DisposeBag()
