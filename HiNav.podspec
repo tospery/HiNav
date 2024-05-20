@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   s.frameworks = 'Foundation'
   
   s.source_files = 'HiNav/**/*'
-  s.dependency 'HiCore', '~> 1.0'
+  s.dependency 'HiDomain', '~> 1.0'
   s.dependency 'RxSwift', '~> 6.0'
   s.dependency 'URLNavigator-Hi', '2.5.1-v1'
   s.dependency 'SwifterSwift/UIKit', '~> 6.0'

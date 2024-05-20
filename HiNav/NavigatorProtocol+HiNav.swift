@@ -10,7 +10,6 @@ import RxSwift
 import URLNavigator_Hi
 import SwifterSwift
 import HiDomain
-import HiCore
 
 var navigateBag = DisposeBag()
 
@@ -33,7 +32,7 @@ public extension NavigatorProtocol {
         // context中的参数的优先级高于查询参数
         parameters += context as? [String: Any] ?? [:]
         // 打印路由地址
-        logger.print("导航地址->\(url.absoluteString)\n\(parameters)", module: .hiIOS)
+        print("导航地址->\(url.absoluteString)\n\(parameters)")
         
         let myURL = self.checkScheme(url, context: context, wrap: wrap, fromNav: fromNav, fromVC: fromVC, animated: animated, completion: completion)
         if myURL == nil {
@@ -214,12 +213,12 @@ public extension NavigatorProtocol {
         }
         guard let scheme = myURL.scheme else { return nil }
         if scheme != UIApplication.shared.urlScheme && scheme != "http" && scheme != "https" {
-            logger.print("第三方url: \(myURL)", module: .hiIOS)
+            print("第三方url: \(myURL)")
             if UIApplication.shared.canOpenURL(myURL) {
                 UIApplication.shared.open(myURL, options: [:], completionHandler: nil)
                 return nil
             }
-            logger.print("无法打开该url: \(myURL)", module: .hiIOS)
+            print("无法打开该url: \(myURL)")
             return nil
         }
         return myURL
@@ -252,11 +251,11 @@ public extension NavigatorProtocol {
         if needLogin && !isLogined {
             self.rxLogin()
                 .subscribe(onNext: { result in
-                    logger.print("自动跳转登录页(数据): \(result)", module: .hiIOS)
+                    print("自动跳转登录页(数据): \(result)")
                 }, onError: { error in
-                    logger.print("自动跳转登录页(错误): \(error)", module: .hiIOS)
+                    print("自动跳转登录页(错误): \(error)")
                 }, onCompleted: {
-                    logger.print("自动跳转登录页(完成)", module: .hiIOS)
+                    print("自动跳转登录页(完成)")
                     var hasLogined = false
                     if let compatible = router as? HiNavCompatible {
                         hasLogined = compatible.isLogined()
@@ -273,14 +272,14 @@ public extension NavigatorProtocol {
     private func getType(_ url: URLConvertible, context: Any?, key: String) -> Int? {
         var parameters: [String: Any] = url.queryParameters
         parameters += context as? [String: Any] ?? [:]
-        return parameters.int(for: key)
+        return tryInt(parameters[key])
     }
     
     /// 用户参数优先级高于函数参数/
     private func getAnimated(_ url: URLConvertible, context: Any?, animated: Bool) -> Bool {
         var parameters: [String: Any] = url.queryParameters
         parameters += context as? [String: Any] ?? [:]
-        return parameters.bool(for: Parameter.animated) ?? animated
+        return tryBool(Parameter.animated) ?? animated
     }
     
     private func convert(context: Any? = nil) -> [String: Any] {
