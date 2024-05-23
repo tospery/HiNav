@@ -154,7 +154,7 @@ final public class HiNav {
             if let title = myURL.queryValue(for: Parameter.title) {
                 paramters[Parameter.title] = title
             }
-            let force = tryBool(paramters[Parameter.routerForceWeb]) ?? false
+            let force = tryBool(paramters[Parameter.navForceWeb]) ?? false
             if !force {
                 // (1) 原生支持
                 let base = UIApplication.shared.baseWebUrl + "/"
@@ -198,7 +198,7 @@ final public class HiNav {
                 navigator.toastMessage(message)
             }
             let result = parameters?[Parameter.result]
-            let observer = parameters?[Parameter.routerObserver] as? AnyObserver<Any>
+            let observer = parameters?[Parameter.navObserver] as? AnyObserver<Any>
             let completion: (() -> Void) = {
                 if result != nil {
                     observer?.onNext(result!)
@@ -255,15 +255,15 @@ final public class HiNav {
                     parameters[key] = value
                 }
             } else {
-                parameters[Parameter.routerContext] = context
+                parameters[Parameter.navContext] = context
             }
         }
         // 2. Host
         guard let host = url.urlValue?.host else { return nil }
-        parameters[Parameter.routerHost] = host
+        parameters[Parameter.navHost] = host
         // 3. Path
         let path = url.urlValue?.path.removingPrefix("/").removingSuffix("/")
-        parameters[Parameter.routerPath] = path?.isEmpty ?? true ? nil : path
+        parameters[Parameter.navPath] = path?.isEmpty ?? true ? nil : path
         // 4. 标题
         parameters[Parameter.title] = tryString(parameters[Parameter.title])
 //        var title: String? = nil
@@ -280,7 +280,7 @@ final public class HiNav {
 //        }
 //        parameters[Parameter.shouldRefresh] = parameters.bool(for: Parameter.shouldRefresh) ?? shouldRefresh
 //        parameters[Parameter.shouldLoadMore] = parameters.bool(for: Parameter.shouldLoadMore) ?? shouldLoadMore
-        parameters[Parameter.routerUrl] = url.urlStringValue
+        parameters[Parameter.navUrl] = url.urlStringValue
         
         return parameters
     }
