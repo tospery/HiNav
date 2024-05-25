@@ -165,7 +165,7 @@ final public class HiNav {
                         return nil
                     }
                     if let vc = result as? UIViewController {
-                        return vc
+                        return nil
                     }
                     if let compatible = self as? HiNavCompatible {
                         let result = compatible.webToNative(provider, navigator, myURL, native, context)
@@ -173,7 +173,7 @@ final public class HiNav {
                             return nil
                         }
                         if let vc = result as? UIViewController {
-                            return vc
+                            return nil
                         }
                     }
                 }
