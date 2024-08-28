@@ -1,6 +1,6 @@
 //
 //  Router.swift
-//  HiIOS
+//  HiUIKit
 //
 //  Created by liaoya on 2022/7/19.
 //
@@ -18,7 +18,7 @@ public enum JumpType: Int {
     case back
 }
 
-/// 前进的分类 -> hiios://[host]?forwardType=0
+/// 前进的分类 -> HiUIKit://[host]?forwardType=0
 public enum ForwardType: Int {
     /// 推进
     case push
@@ -28,7 +28,7 @@ public enum ForwardType: Int {
     case open
 }
 
-/// 后退的分类 -> hiios://back?backType=0
+/// 后退的分类 -> HiUIKit://back?backType=0
 public enum BackType: Int {
     /// 自动
     case auto
@@ -40,7 +40,7 @@ public enum BackType: Int {
     case dismiss
 }
 
-/// 打开的分类 -> hiios://[popup|sheet|alert|toast]/[path]
+/// 打开的分类 -> HiUIKit://[popup|sheet|alert|toast]/[path]
 public enum OpenType: Int {
     /// 消息框（自动关闭）
     case toast

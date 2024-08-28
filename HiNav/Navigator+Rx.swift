@@ -1,6 +1,6 @@
 //
 //  Navigator+Rx.swift
-//  HiIOS
+//  HiUIKit
 //
 //  Created by liaoya on 2022/7/19.
 //
