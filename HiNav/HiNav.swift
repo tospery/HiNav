@@ -8,7 +8,7 @@
 import Foundation
 import RxSwift
 import URLNavigator_Hi
-import HiDomain
+import HiBase
 
 /// 导航的分类
 public enum JumpType: Int {
@@ -77,17 +77,17 @@ public protocol HiNavCompatible {
     func allowedPaths(host: HiNav.Host) -> [HiNav.Path]
     
     func needLogin(host: HiNav.Host, path: HiNav.Path?) -> Bool
-//    func customLogin(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+//    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
     
-    func customHome(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
-    func customLogin(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+    func customHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
     
-    func webToNative(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol, _ webURL: URLConvertible, _ nativeURL: URLConvertible, _ context: Any?) -> Any?
-    func webViewController(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol, _ paramters: [String: Any]) -> UIViewController?
+    func webToNative(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ webURL: URLConvertible, _ nativeURL: URLConvertible, _ context: Any?) -> Any?
+    func webViewController(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ paramters: [String: Any]) -> UIViewController?
     
-    func web(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol)
-    func page(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol)
-    func open(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol)
+    func web(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
+    func page(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
+    func open(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
     
 }
 
@@ -115,7 +115,7 @@ final public class HiNav {
     init() {
     }
     
-    public func initialize(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    public func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         self.buildinMatch(provider, navigator)
         self.buildinWeb(provider, navigator)
         self.buildinBack(provider, navigator)
@@ -128,7 +128,7 @@ final public class HiNav {
         }
     }
     
-    func buildinMatch(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func buildinMatch(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         (navigator as? Navigator)?.matcher.valueConverters["type"] = { [weak self] pathComponents, index in
             guard let `self` = self else { return nil }
             if let compatible = self as? HiNavCompatible {
@@ -144,7 +144,7 @@ final public class HiNav {
         }
     }
     
-    func buildinWeb(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func buildinWeb(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         let webFactory: ViewControllerFactory = { [weak self] (url, values, context) in
             guard let `self` = self else { return nil }
             guard let myURL = url.urlValue else { return nil }
@@ -190,7 +190,7 @@ final public class HiNav {
         navigator.register("https://[path:_]", webFactory)
     }
     
-    func buildinBack(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func buildinBack(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .back)) { url, values, context in
             guard let top = UIViewController.topMost else { return false }
             let parameters = self.parameters(url, values, context)
@@ -225,7 +225,7 @@ final public class HiNav {
         }
     }
     
-    func buildinHome(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func buildinHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .home)) { url, values, context in
             if let compatible = self as? HiNavCompatible {
                 return compatible.customHome(provider, navigator, url, values, context)
@@ -234,7 +234,7 @@ final public class HiNav {
         }
     }
     
-    func buildinLogin(_ provider: HiDomain.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func buildinLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .login)) { url, values, context in
             if let compatible = self as? HiNavCompatible {
                 return compatible.customLogin(provider, navigator, url, values, context)

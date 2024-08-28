@@ -9,7 +9,7 @@ import UIKit
 import RxSwift
 import URLNavigator_Hi
 import SwifterSwift
-import HiDomain
+import HiBase
 
 extension Navigator: ReactiveCompatible { }
 public extension Reactive where Base: Navigator {
