@@ -3,16 +3,7 @@ import HiBase
 import RxSwift
 import URLNavigator_Hi
 
-public protocol HiNavCompatible {
-    
-    func isLogined() -> Bool
-    
-    func isLegalHost(host: HiNavHost) -> Bool
-    func allowedPaths(host: HiNavHost) -> [HiNavPath]
-    
-    func needLogin(host: HiNavHost, path: HiNavPath?) -> Bool
-//    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
-    
+public protocol HiNavCompatibleEx2 {
     func customHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
     func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
     
@@ -22,14 +13,9 @@ public protocol HiNavCompatible {
     func web(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
     func page(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
     func open(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
-    
 }
 
-final public class HiNav {
-    
-    public static var shared = HiNav()
-    
-    init() { }
+public extension HiNav {
     
     public func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         self.buildinMatch(provider, navigator)
@@ -37,7 +23,7 @@ final public class HiNav {
         self.buildinBack(provider, navigator)
         self.buildinHome(provider, navigator)
         self.buildinLogin(provider, navigator)
-        if let compatible = self as? HiNavCompatible {
+        if let compatible = self as? HiNavCompatibleEx2 {
             compatible.web(provider, navigator)
             compatible.page(provider, navigator)
             compatible.open(provider, navigator)
@@ -83,7 +69,7 @@ final public class HiNav {
                     if result is UIViewController {
                         return nil
                     }
-                    if let compatible = self as? HiNavCompatible {
+                    if let compatible = self as? HiNavCompatibleEx2 {
                         let result = compatible.webToNative(provider, navigator, myURL, native, context)
                         if let rt = result as? Bool, rt {
                             return nil
@@ -95,7 +81,7 @@ final public class HiNav {
                 }
             }
             // (2) 网页跳转
-            if let compatible = self as? HiNavCompatible {
+            if let compatible = self as? HiNavCompatibleEx2 {
                 return compatible.webViewController(provider, navigator, paramters)
             }
             return nil
@@ -143,7 +129,7 @@ final public class HiNav {
     
     func buildinHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .home)) { url, values, context in
-            if let compatible = self as? HiNavCompatible {
+            if let compatible = self as? HiNavCompatibleEx2 {
                 return compatible.customHome(provider, navigator, url, values, context)
             }
             return false
@@ -152,7 +138,7 @@ final public class HiNav {
     
     func buildinLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         navigator.handle(self.urlPattern(host: .login)) { url, values, context in
-            if let compatible = self as? HiNavCompatible {
+            if let compatible = self as? HiNavCompatibleEx2 {
                 return compatible.customLogin(provider, navigator, url, values, context)
             }
             return false
@@ -228,33 +214,4 @@ final public class HiNav {
     }
 
 }
-
-//extension HiNavHost {
-//    /// 返回上一级（包括退回或者关闭）
-//    public static var back: HiNavHost { "back" }
-//    /// 弹窗分为两类（自动关闭的toast和手动关闭的）
-//    public static var toast: HiNavHost { "toast" }
-//    public static var alert: HiNavHost { "alert" }
-//    public static var sheet: HiNavHost { "sheet" }
-//    public static var popup: HiNavHost { "popup" }
-//    
-//    public static var dashboard: HiNavHost { "dashboard" }
-//    public static var personal: HiNavHost { "personal" }
-//    
-//    public static var home: HiNavHost { "home" }
-//    public static var login: HiNavHost { "login" }
-//    public static var user: HiNavHost { "user" }
-//    public static var custom: HiNavHost { "custom" }
-//    public static var profile: HiNavHost { "profile" }
-//    public static var settings: HiNavHost { "settings" }
-//    public static var about: HiNavHost { "about" }
-//    public static var search: HiNavHost { "search" }
-//}
-//
-//extension HiNavPath {
-//    public static var page: HiNavPath { "page" }
-//    public static var list: HiNavPath { "list" }
-//    public static var detail: HiNavPath { "detail" }
-//    public static var history: HiNavPath { "history" }
-//}
 

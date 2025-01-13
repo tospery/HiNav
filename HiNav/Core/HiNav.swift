@@ -1,4 +1,5 @@
 import Foundation
+import HiBase
 
 /// 导航的分类
 public enum JumpType: Int {
@@ -77,3 +78,45 @@ extension HiNavHost {
 }
 
 extension HiNavPath { }
+
+
+public protocol HiNavCompatible {
+    
+    // 合法的外部跳转
+    func isLegalHost(host: HiNavHost) -> Bool
+    func allowedPaths(host: HiNavHost) -> [HiNavPath]
+    
+    // user-login
+    func isLogined() -> Bool
+    func needLogin(host: HiNavHost, path: HiNavPath?) -> Bool
+    
+    // target解析
+    func resolution(_ target: String) -> Any?
+    
+}
+
+final public class HiNav {
+    
+    public static var shared = HiNav()
+    
+    init() { }
+    
+    public func deepLink(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
+        var url = "\(Bundle.main.urlScheme() ?? "")://\(host)".url!
+        if let path = path {
+            url.appendPathComponent(path)
+        }
+        if let parameters = parameters {
+            url.appendQueryParameters(parameters)
+        }
+        return url.absoluteString.removingSuffix("?")
+    }
+    
+    public func parse(_ target: String) -> Any? {
+        if let compatible = self as? HiNavCompatible {
+            return compatible.resolution(target)
+        }
+        return nil
+    }
+    
+}
