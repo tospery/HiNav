@@ -17,7 +17,7 @@ public protocol HiNavCompatibleEx2 {
 
 public extension HiNav {
     
-    public func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+    func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
         self.buildinMatch(provider, navigator)
         self.buildinWeb(provider, navigator)
         self.buildinBack(provider, navigator)
@@ -145,7 +145,7 @@ public extension HiNav {
         }
     }
     
-    public func parameters(_ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> [String: Any]? {
+    func parameters(_ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> [String: Any]? {
         // 1. 基础参数
         var parameters: [String: Any] = url.queryParameters
         for (key, value) in values {
@@ -191,7 +191,7 @@ public extension HiNav {
     /// 对于详情页，如app://user/detail采用<id>匹配模式
     /// 此时，需要注册两个patter，分别为app://user/42980和app://user
     /// 前者用于跳转到指定用户的详情页，后者用户跳转到当前登录用户的详情页
-    public func urlPattern(host: HiNavHost, path: HiNavPath? = nil, placeholder: String? = nil) -> String {
+    func urlPattern(host: HiNavHost, path: HiNavPath? = nil, placeholder: String? = nil) -> String {
         var url = "\(Bundle.main.urlScheme() ?? "")://\(host)"
         if let path = path {
             url += "/\(path)"
@@ -202,7 +202,7 @@ public extension HiNav {
         return url
     }
     
-    public func urlString(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
+    func urlString(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
         var url = "\(Bundle.main.urlScheme() ?? "")://\(host)".url!
         if let path = path {
             url.appendPathComponent(path)
