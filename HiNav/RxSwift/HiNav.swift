@@ -1,468 +1,260 @@
 import Foundation
-import SwifterSwift
-
-/// 导航的设计
-/// target分为两类，一个是通用链接（urlString，来自网页），另一个是深度链接（deepLink，来自应用）
-/// 通用链接和深度链接没有语义上的关联性，而需要进行转换，可以通过添加自定义的fromWeb参数来区分，深度链接的生产是来源于app还是web
-/// 对于deepLink，只采用host的设计方式，不需要path，以便进行简化。
-
-/// 导航的分类
-public enum JumpType: Int {
-    /// 前进
-    case forward
-    /// 后退
-    case back
-}
-
-/// 前进的分类 -> HiSwiftUI://[host]?forwardType=0
-public enum ForwardType: Int {
-    /// 推进
-    case push
-    /// 展示
-    case present
-    /// 打开
-    case open
-}
-
-/// 后退的分类 -> HiSwiftUI://back?backType=0
-public enum BackType: Int {
-    /// 自动
-    case auto
-    /// 弹出（一个）
-    case popOne
-    /// 弹出（所有）
-    case popAll
-    /// 退场
-    case dismiss
-}
-
-/// 打开的分类 -> HiSwiftUI://[popup|sheet|alert|toast]/[path]
-public enum OpenType: Int {
-    /// 消息框（自动关闭）
-    case toast
-    /// 提示框（可选择的）
-    case alert
-    /// 表单框（可操作的）
-    case sheet
-    /// 弹窗
-    case popup
-    /// 业务
-    case logic
-    
-    static let allHosts = [
-        HiNav.Host.toast,
-        HiNav.Host.alert,
-        HiNav.Host.sheet,
-        HiNav.Host.popup,
-        HiNav.Host.logic
-    ]
-}
-
-public enum HiNavError: Error {
-    case navigation
-}
+import HiBase
+import RxSwift
+import URLNavigator_Hi
 
 public protocol HiNavCompatible {
     
-    // 合法的外部跳转
-    func isLegalHost(host: HiNav.Host) -> Bool
-    func allowedPaths(host: HiNav.Host) -> [HiNav.Path]
-    
-    // user-login
     func isLogined() -> Bool
-    func needLogin(host: HiNav.Host, path: HiNav.Path?) -> Bool
     
-    // target解析
-    func resolution(_ target: String) -> Any?
+    func isLegalHost(host: HiNavHost) -> Bool
+    func allowedPaths(host: HiNavHost) -> [HiNavPath]
+    
+    func needLogin(host: HiNavHost, path: HiNavPath?) -> Bool
+//    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+    
+    func customHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
+    
+    func webToNative(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ webURL: URLConvertible, _ nativeURL: URLConvertible, _ context: Any?) -> Any?
+    func webViewController(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ paramters: [String: Any]) -> UIViewController?
+    
+    func web(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
+    func page(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
+    func open(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
+    
 }
 
 final public class HiNav {
     
-    public typealias Host = String
-    public typealias Path = String
-    
     public static var shared = HiNav()
     
-    public func deepLink(host: Host, path: Path? = nil, parameters: [String: String]? = nil) -> String {
-        var url = "\(UIApplication.shared.urlScheme)://\(host)".url!
+    init() { }
+    
+    public func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        self.buildinMatch(provider, navigator)
+        self.buildinWeb(provider, navigator)
+        self.buildinBack(provider, navigator)
+        self.buildinHome(provider, navigator)
+        self.buildinLogin(provider, navigator)
+        if let compatible = self as? HiNavCompatible {
+            compatible.web(provider, navigator)
+            compatible.page(provider, navigator)
+            compatible.open(provider, navigator)
+        }
+    }
+    
+    func buildinMatch(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        (navigator as? Navigator)?.matcher.valueConverters["type"] = { [weak self] pathComponents, index in
+            guard let `self` = self else { return nil }
+            if let compatible = self as? HiNavCompatible {
+                let host = pathComponents[0]
+                if compatible.isLegalHost(host: host) {
+                    let path = pathComponents[index]
+                    if compatible.allowedPaths(host: host).contains(path) {
+                        return path
+                    }
+                }
+            }
+            return nil
+        }
+    }
+    
+    func buildinWeb(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        let webFactory: ViewControllerFactory = { [weak self] (url, values, context) in
+            guard let `self` = self else { return nil }
+            guard let myURL = url.urlValue else { return nil }
+            let string = myURL.absoluteString
+            var paramters = self.parameters(myURL, values, context) ?? [:]
+            paramters[Parameter.url] = string
+            if let title = myURL.queryValue(for: Parameter.title) {
+                paramters[Parameter.title] = title
+            }
+            let force = tryBool(paramters[Parameter.navForceWeb]) ?? false
+            if !force {
+                // (1) 原生支持
+                let base = "\(Bundle.main.baseWebUrl)/"
+                if string.hasPrefix(base) {
+                    let native = string.replacingOccurrences(of: base, with: "\(Bundle.main.urlScheme() ?? "")://")
+                    let result = navigator.jump(native, context: context)
+                    if result is Bool {
+                        return nil
+                    }
+                    if result is UIViewController {
+                        return nil
+                    }
+                    if let compatible = self as? HiNavCompatible {
+                        let result = compatible.webToNative(provider, navigator, myURL, native, context)
+                        if let rt = result as? Bool, rt {
+                            return nil
+                        }
+                        if result is UIViewController {
+                            return nil
+                        }
+                    }
+                }
+            }
+            // (2) 网页跳转
+            if let compatible = self as? HiNavCompatible {
+                return compatible.webViewController(provider, navigator, paramters)
+            }
+            return nil
+        }
+//        navigator.register("http://<path:_>", webFactory)
+//        navigator.register("https://<path:_>", webFactory)
+        navigator.register("http://[path:_]", webFactory)
+        navigator.register("https://[path:_]", webFactory)
+    }
+    
+    func buildinBack(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        navigator.handle(self.urlPattern(host: .back)) { url, values, context in
+            guard let top = UIViewController.topMost else { return false }
+            let parameters = self.parameters(url, values, context)
+            if let message = tryString(parameters?[Parameter.message]), message.isNotEmpty {
+                navigator.toastMessage(message)
+            }
+            let result = parameters?[Parameter.result]
+            let observer = parameters?[Parameter.navObserver] as? AnyObserver<Any>
+            let completion: (() -> Void) = {
+                if result != nil {
+                    observer?.onNext(result!)
+                }
+                observer?.onCompleted()
+            }
+            let back = tryEnum(value: parameters?[Parameter.backType], type: BackType.self) ?? .auto
+            let animated = tryBool(parameters?[Parameter.animated]) ?? true
+            switch back {
+            case .auto:
+                if top.navigationController?.viewControllers.count ?? 0 > 1 {
+                    popOne(viewController: top, animated: animated, completion)
+                } else {
+                    dismiss(viewController: top, animated: animated, completion)
+                }
+            case .popOne:
+                popOne(viewController: top, animated: animated, completion)
+            case .popAll:
+                popAll(viewController: top, animated: animated, completion)
+            case .dismiss:
+                dismiss(viewController: top, animated: animated, completion)
+            }
+            return true
+        }
+    }
+    
+    func buildinHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        navigator.handle(self.urlPattern(host: .home)) { url, values, context in
+            if let compatible = self as? HiNavCompatible {
+                return compatible.customHome(provider, navigator, url, values, context)
+            }
+            return false
+        }
+    }
+    
+    func buildinLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
+        navigator.handle(self.urlPattern(host: .login)) { url, values, context in
+            if let compatible = self as? HiNavCompatible {
+                return compatible.customLogin(provider, navigator, url, values, context)
+            }
+            return false
+        }
+    }
+    
+    public func parameters(_ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> [String: Any]? {
+        // 1. 基础参数
+        var parameters: [String: Any] = url.queryParameters
+        for (key, value) in values {
+            parameters[key] = value
+        }
+        if let context = context {
+            if let ctx = context as? [String: Any] {
+                for (key, value) in ctx {
+                    parameters[key] = value
+                }
+            } else {
+                parameters[Parameter.navContext] = context
+            }
+        }
+        // 2. Host
+        guard let host = url.urlValue?.host else { return nil }
+        parameters[Parameter.navHost] = host
+        // 3. Path
+        let path = url.urlValue?.path.removingPrefix("/").removingSuffix("/")
+        parameters[Parameter.navPath] = path?.isEmpty ?? true ? nil : path
+        // 4. 标题
+        parameters[Parameter.title] = tryString(parameters[Parameter.title])
+//        var title: String? = nil
+//        if let compatible = self as? HiNavCompatible {
+//            title = compatible.title(host: host, path: path)
+//        }
+//        parameters[Parameter.title] = parameters.string(for: Parameter.title) ?? title
+        // 5. 刷新/加载
+//        var shouldRefresh = false
+//        var shouldLoadMore = false
+//        if let compatible = self as? HiNavCompatible {
+//            shouldRefresh = compatible.shouldRefresh(host: host, path: path)
+//            shouldLoadMore = compatible.shouldLoadMore(host: host, path: path)
+//        }
+//        parameters[Parameter.shouldRefresh] = parameters.bool(for: Parameter.shouldRefresh) ?? shouldRefresh
+//        parameters[Parameter.shouldLoadMore] = parameters.bool(for: Parameter.shouldLoadMore) ?? shouldLoadMore
+        parameters[Parameter.navUrl] = url.urlStringValue
+        
+        return parameters
+    }
+    
+    /// 注册的pattern
+    /// 对于详情页，如app://user/detail采用<id>匹配模式
+    /// 此时，需要注册两个patter，分别为app://user/42980和app://user
+    /// 前者用于跳转到指定用户的详情页，后者用户跳转到当前登录用户的详情页
+    public func urlPattern(host: HiNavHost, path: HiNavPath? = nil, placeholder: String? = nil) -> String {
+        var url = "\(Bundle.main.urlScheme() ?? "")://\(host)"
+        if let path = path {
+            url += "/\(path)"
+        }
+        if let placeholder = placeholder {
+            url += "/\(placeholder)"
+        }
+        return url
+    }
+    
+    public func urlString(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
+        var url = "\(Bundle.main.urlScheme() ?? "")://\(host)".url!
         if let path = path {
             url.appendPathComponent(path)
         }
         if let parameters = parameters {
             url.appendQueryParameters(parameters)
         }
-        return url.absoluteString.removingSuffix("?")
+        return url.absoluteString
     }
-    
-    public func parse(_ target: String) -> Any? {
-        if let compatible = self as? HiNavCompatible {
-            return compatible.resolution(target)
-        }
-        return nil
-    }
-    
+
 }
 
-extension HiNav.Host {
-    /// 返回上一级（包括退回或者关闭）
-    public static var back: HiNav.Host { "back" }
-    /// 弹窗分为两类（自动关闭的toast和手动关闭的）
-    public static var toast: HiNav.Host { "toast" }
-    public static var alert: HiNav.Host { "alert" }
-    public static var sheet: HiNav.Host { "sheet" }
-    public static var popup: HiNav.Host { "popup" }
-    public static var logic: HiNav.Host { "logic" }
-    /// 常用的host
-    public static var web: HiNav.Host { "web" }
-    public static var login: HiNav.Host { "login" }
-    public static var personal: HiNav.Host { "personal" }
-    public static var dashboard: HiNav.Host { "dashboard" }
-}
-
-extension HiNav.Path { }
-
-
-
-
-
-
-
-
-
-//import Foundation
-//import RxSwift
-//import URLNavigator_Hi
-//import HiBase
-//
-///// 导航的分类
-//public enum JumpType: Int {
-//    /// 前进
-//    case forward
-//    /// 后退
-//    case back
-//}
-//
-///// 前进的分类 -> HiUIKit://[host]?forwardType=0
-//public enum ForwardType: Int {
-//    /// 推进
-//    case push
-//    /// 展示
-//    case present
-//    /// 打开
-//    case open
-//}
-//
-///// 后退的分类 -> HiUIKit://back?backType=0
-//public enum BackType: Int {
-//    /// 自动
-//    case auto
-//    /// 弹出（一个）
-//    case popOne
-//    /// 弹出（所有）
-//    case popAll
-//    /// 退场
-//    case dismiss
-//}
-//
-///// 打开的分类 -> HiUIKit://[popup|sheet|alert|toast]/[path]
-//public enum OpenType: Int {
-//    /// 消息框（自动关闭）
-//    case toast
-//    /// 提示框（可选择的）
-//    case alert
-//    /// 表单框（可操作的）
-//    case sheet
-//    /// 弹窗
-//    case popup
-//    /// 登录（因为登录页通常需要自定义，故以打开方式处理）
-//    case login
-//    /// 首页
-//    case home
-//    
-//    static let allHosts = [
-//        HiNav.Host.toast,
-//        HiNav.Host.alert,
-//        HiNav.Host.sheet,
-//        HiNav.Host.popup,
-//        HiNav.Host.login,
-//        HiNav.Host.home
-//    ]
-//}
-//
-//public enum HiNavError: Error {
-//    case navigation
-//}
-//
-//public protocol HiNavCompatible {
-//    
-//    func isLogined() -> Bool
-//    
-//    func isLegalHost(host: HiNav.Host) -> Bool
-//    func allowedPaths(host: HiNav.Host) -> [HiNav.Path]
-//    
-//    func needLogin(host: HiNav.Host, path: HiNav.Path?) -> Bool
-////    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
-//    
-//    func customHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
-//    func customLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> Bool
-//    
-//    func webToNative(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ webURL: URLConvertible, _ nativeURL: URLConvertible, _ context: Any?) -> Any?
-//    func webViewController(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol, _ paramters: [String: Any]) -> UIViewController?
-//    
-//    func web(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
-//    func page(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
-//    func open(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol)
-//    
-//}
-//
-////public struct BackResult {
-////    
-////    public var type: BackType
-////    public var data: Any?
-////    
-////    public init(
-////        type: BackType,
-////        data: Any? = nil
-////    ) {
-////        self.type = type
-////        self.data = data
-////    }
-////}
-//
-//final public class HiNav {
-//
-//    public typealias Host = String
-//    public typealias Path = String
-//    
-//    public static var shared = HiNav()
-//    
-//    init() {
-//    }
-//    
-//    public func initialize(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        self.buildinMatch(provider, navigator)
-//        self.buildinWeb(provider, navigator)
-//        self.buildinBack(provider, navigator)
-//        self.buildinHome(provider, navigator)
-//        self.buildinLogin(provider, navigator)
-//        if let compatible = self as? HiNavCompatible {
-//            compatible.web(provider, navigator)
-//            compatible.page(provider, navigator)
-//            compatible.open(provider, navigator)
-//        }
-//    }
-//    
-//    func buildinMatch(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        (navigator as? Navigator)?.matcher.valueConverters["type"] = { [weak self] pathComponents, index in
-//            guard let `self` = self else { return nil }
-//            if let compatible = self as? HiNavCompatible {
-//                let host = pathComponents[0]
-//                if compatible.isLegalHost(host: host) {
-//                    let path = pathComponents[index]
-//                    if compatible.allowedPaths(host: host).contains(path) {
-//                        return path
-//                    }
-//                }
-//            }
-//            return nil
-//        }
-//    }
-//    
-//    func buildinWeb(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        let webFactory: ViewControllerFactory = { [weak self] (url, values, context) in
-//            guard let `self` = self else { return nil }
-//            guard let myURL = url.urlValue else { return nil }
-//            let string = myURL.absoluteString
-//            var paramters = self.parameters(myURL, values, context) ?? [:]
-//            paramters[Parameter.url] = string
-//            if let title = myURL.queryValue(for: Parameter.title) {
-//                paramters[Parameter.title] = title
-//            }
-//            let force = tryBool(paramters[Parameter.navForceWeb]) ?? false
-//            if !force {
-//                // (1) 原生支持
-//                let base = UIApplication.shared.baseWebUrl + "/"
-//                if string.hasPrefix(base) {
-//                    let native = string.replacingOccurrences(of: base, with: UIApplication.shared.urlScheme + "://")
-//                    let result = navigator.jump(native, context: context)
-//                    if result is Bool {
-//                        return nil
-//                    }
-//                    if let vc = result as? UIViewController {
-//                        return nil
-//                    }
-//                    if let compatible = self as? HiNavCompatible {
-//                        let result = compatible.webToNative(provider, navigator, myURL, native, context)
-//                        if let rt = result as? Bool, rt {
-//                            return nil
-//                        }
-//                        if let vc = result as? UIViewController {
-//                            return nil
-//                        }
-//                    }
-//                }
-//            }
-//            // (2) 网页跳转
-//            if let compatible = self as? HiNavCompatible {
-//                return compatible.webViewController(provider, navigator, paramters)
-//            }
-//            return nil
-//        }
-////        navigator.register("http://<path:_>", webFactory)
-////        navigator.register("https://<path:_>", webFactory)
-//        navigator.register("http://[path:_]", webFactory)
-//        navigator.register("https://[path:_]", webFactory)
-//    }
-//    
-//    func buildinBack(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        navigator.handle(self.urlPattern(host: .back)) { url, values, context in
-//            guard let top = UIViewController.topMost else { return false }
-//            let parameters = self.parameters(url, values, context)
-//            if let message = tryString(parameters?[Parameter.message]), message.isNotEmpty {
-//                navigator.toastMessage(message)
-//            }
-//            let result = parameters?[Parameter.result]
-//            let observer = parameters?[Parameter.navObserver] as? AnyObserver<Any>
-//            let completion: (() -> Void) = {
-//                if result != nil {
-//                    observer?.onNext(result!)
-//                }
-//                observer?.onCompleted()
-//            }
-//            let back = tryEnum(value: parameters?[Parameter.backType], type: BackType.self) ?? .auto
-//            let animated = tryBool(parameters?[Parameter.animated]) ?? true
-//            switch back {
-//            case .auto:
-//                if top.navigationController?.viewControllers.count ?? 0 > 1 {
-//                    popOne(viewController: top, animated: animated, completion)
-//                } else {
-//                    dismiss(viewController: top, animated: animated, completion)
-//                }
-//            case .popOne:
-//                popOne(viewController: top, animated: animated, completion)
-//            case .popAll:
-//                popAll(viewController: top, animated: animated, completion)
-//            case .dismiss:
-//                dismiss(viewController: top, animated: animated, completion)
-//            }
-//            return true
-//        }
-//    }
-//    
-//    func buildinHome(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        navigator.handle(self.urlPattern(host: .home)) { url, values, context in
-//            if let compatible = self as? HiNavCompatible {
-//                return compatible.customHome(provider, navigator, url, values, context)
-//            }
-//            return false
-//        }
-//    }
-//    
-//    func buildinLogin(_ provider: HiBase.ProviderProtocol, _ navigator: NavigatorProtocol) {
-//        navigator.handle(self.urlPattern(host: .login)) { url, values, context in
-//            if let compatible = self as? HiNavCompatible {
-//                return compatible.customLogin(provider, navigator, url, values, context)
-//            }
-//            return false
-//        }
-//    }
-//    
-//    public func parameters(_ url: URLConvertible, _ values: [String: Any], _ context: Any?) -> [String: Any]? {
-//        // 1. 基础参数
-//        var parameters: [String: Any] = url.queryParameters
-//        for (key, value) in values {
-//            parameters[key] = value
-//        }
-//        if let context = context {
-//            if let ctx = context as? [String: Any] {
-//                for (key, value) in ctx {
-//                    parameters[key] = value
-//                }
-//            } else {
-//                parameters[Parameter.navContext] = context
-//            }
-//        }
-//        // 2. Host
-//        guard let host = url.urlValue?.host else { return nil }
-//        parameters[Parameter.navHost] = host
-//        // 3. Path
-//        let path = url.urlValue?.path.removingPrefix("/").removingSuffix("/")
-//        parameters[Parameter.navPath] = path?.isEmpty ?? true ? nil : path
-//        // 4. 标题
-//        parameters[Parameter.title] = tryString(parameters[Parameter.title])
-////        var title: String? = nil
-////        if let compatible = self as? HiNavCompatible {
-////            title = compatible.title(host: host, path: path)
-////        }
-////        parameters[Parameter.title] = parameters.string(for: Parameter.title) ?? title
-//        // 5. 刷新/加载
-////        var shouldRefresh = false
-////        var shouldLoadMore = false
-////        if let compatible = self as? HiNavCompatible {
-////            shouldRefresh = compatible.shouldRefresh(host: host, path: path)
-////            shouldLoadMore = compatible.shouldLoadMore(host: host, path: path)
-////        }
-////        parameters[Parameter.shouldRefresh] = parameters.bool(for: Parameter.shouldRefresh) ?? shouldRefresh
-////        parameters[Parameter.shouldLoadMore] = parameters.bool(for: Parameter.shouldLoadMore) ?? shouldLoadMore
-//        parameters[Parameter.navUrl] = url.urlStringValue
-//        
-//        return parameters
-//    }
-//    
-//    /// 注册的pattern
-//    /// 对于详情页，如app://user/detail采用<id>匹配模式
-//    /// 此时，需要注册两个patter，分别为app://user/42980和app://user
-//    /// 前者用于跳转到指定用户的详情页，后者用户跳转到当前登录用户的详情页
-//    public func urlPattern(host: HiNav.Host, path: Path? = nil, placeholder: String? = nil) -> String {
-//        var url = "\(UIApplication.shared.urlScheme)://\(host)"
-//        if let path = path {
-//            url += "/\(path)"
-//        }
-//        if let placeholder = placeholder {
-//            url += "/\(placeholder)"
-//        }
-//        return url
-//    }
-//    
-//    public func urlString(host: HiNav.Host, path: Path? = nil, parameters: [String: String]? = nil) -> String {
-//        var url = "\(UIApplication.shared.urlScheme)://\(host)".url!
-//        if let path = path {
-//            url.appendPathComponent(path)
-//        }
-//        if let parameters = parameters {
-//            url.appendQueryParameters(parameters)
-//        }
-//        return url.absoluteString
-//    }
-//
-//}
-//
-//extension HiNav.Host {
+//extension HiNavHost {
 //    /// 返回上一级（包括退回或者关闭）
-//    public static var back: HiNav.Host { "back" }
+//    public static var back: HiNavHost { "back" }
 //    /// 弹窗分为两类（自动关闭的toast和手动关闭的）
-//    public static var toast: HiNav.Host { "toast" }
-//    public static var alert: HiNav.Host { "alert" }
-//    public static var sheet: HiNav.Host { "sheet" }
-//    public static var popup: HiNav.Host { "popup" }
+//    public static var toast: HiNavHost { "toast" }
+//    public static var alert: HiNavHost { "alert" }
+//    public static var sheet: HiNavHost { "sheet" }
+//    public static var popup: HiNavHost { "popup" }
 //    
-//    public static var dashboard: HiNav.Host { "dashboard" }
-//    public static var personal: HiNav.Host { "personal" }
+//    public static var dashboard: HiNavHost { "dashboard" }
+//    public static var personal: HiNavHost { "personal" }
 //    
-//    public static var home: HiNav.Host { "home" }
-//    public static var login: HiNav.Host { "login" }
-//    public static var user: HiNav.Host { "user" }
-//    public static var custom: HiNav.Host { "custom" }
-//    public static var profile: HiNav.Host { "profile" }
-//    public static var settings: HiNav.Host { "settings" }
-//    public static var about: HiNav.Host { "about" }
-//    public static var search: HiNav.Host { "search" }
+//    public static var home: HiNavHost { "home" }
+//    public static var login: HiNavHost { "login" }
+//    public static var user: HiNavHost { "user" }
+//    public static var custom: HiNavHost { "custom" }
+//    public static var profile: HiNavHost { "profile" }
+//    public static var settings: HiNavHost { "settings" }
+//    public static var about: HiNavHost { "about" }
+//    public static var search: HiNavHost { "search" }
 //}
 //
-//extension HiNav.Path {
-//    public static var page: HiNav.Path { "page" }
-//    public static var list: HiNav.Path { "list" }
-//    public static var detail: HiNav.Path { "detail" }
-//    public static var history: HiNav.Path { "history" }
+//extension HiNavPath {
+//    public static var page: HiNavPath { "page" }
+//    public static var list: HiNavPath { "list" }
+//    public static var detail: HiNavPath { "detail" }
+//    public static var history: HiNavPath { "history" }
 //}
-//
+

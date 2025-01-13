@@ -7,8 +7,7 @@
 
 import UIKit
 
-public protocol AlertActionType {
-    var title: String? { get }
+public protocol AlertActionType: CustomStringConvertible {
     var style: UIAlertAction.Style { get }
 }
 
@@ -23,7 +22,7 @@ public enum SimpleAlertAction: AlertActionType, Equatable {
     case cancel
     case destructive
     
-    public var title: String? {
+    public var description: String {
         switch self {
         case .default:      return NSLocalizedString("OK", comment: "")
         case .cancel:       return NSLocalizedString("Cancel", comment: "")

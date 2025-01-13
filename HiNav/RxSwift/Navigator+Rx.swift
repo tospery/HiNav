@@ -11,7 +11,7 @@ import URLNavigator_Hi
 import SwifterSwift
 import HiBase
 
-extension Navigator: ReactiveCompatible { }
+extension Navigator: @retroactive ReactiveCompatible { }
 public extension Reactive where Base: Navigator {
     
     func jump(

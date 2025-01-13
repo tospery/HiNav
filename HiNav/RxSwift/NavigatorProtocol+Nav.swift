@@ -171,11 +171,11 @@ public extension NavigatorProtocol {
     
     // MARK: popup
     @discardableResult
-    func popup(_ path: HiNav.Path, context: Any? = nil) -> Bool {
+    func popup(_ path: HiNavPath, context: Any? = nil) -> Bool {
         self.jump(HiNav.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context)) as? Bool ?? false
     }
     
-    func rxPopup(_ path: HiNav.Path, context: Any? = nil) -> Observable<Any> {
+    func rxPopup(_ path: HiNavPath, context: Any? = nil) -> Observable<Any> {
         self.rxJump(HiNav.shared.urlString(host: .popup, path: path), context: self.contextForPopup(context: context))
     }
     
@@ -212,7 +212,7 @@ public extension NavigatorProtocol {
             myURL = "https://\(myURL.absoluteString)".url ?? myURL
         }
         guard let scheme = myURL.scheme else { return nil }
-        if scheme != UIApplication.shared.urlScheme && scheme != "http" && scheme != "https" {
+        if scheme != Bundle.main.urlScheme() && scheme != "http" && scheme != "https" {
             print("第三方url: \(myURL)")
             if UIApplication.shared.canOpenURL(myURL) {
                 UIApplication.shared.open(myURL, options: [:], completionHandler: nil)
@@ -318,7 +318,7 @@ public extension NavigatorProtocol {
         var ctx = self.convert()
         ctx[Parameter.jumpType] = JumpType.forward.rawValue
         ctx[Parameter.forwardType] = ForwardType.open.rawValue
-        ctx[Parameter.openType] = OpenType.login.rawValue
+        ctx[Parameter.openType] = OpenType.logic.rawValue // YJX_TODO
         return ctx
     }
     
