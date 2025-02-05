@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'HiNav'
-  s.version          = '1.0.6'
+  s.version          = '1.1.0'
   s.summary          = 'Nav module.'
   s.description      = <<-DESC
 						Nav module using Swift.
