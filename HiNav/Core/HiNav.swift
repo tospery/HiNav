@@ -74,7 +74,7 @@ extension HiNavHost {
     public static var user: HiNavHost { "user" }
     public static var home: HiNavHost { "home" }
     public static var login: HiNavHost { "login" }
-    public static var personal: HiNavHost { "personal" }
+    public static var mine: HiNavHost { "mine" }
 }
 
 extension HiNavPath { }
