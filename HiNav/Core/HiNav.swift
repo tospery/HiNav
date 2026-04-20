@@ -112,6 +112,15 @@ final public class HiNav {
         return url.absoluteString.removingSuffix("?")
     }
     
+    public func deepLink(path: String, parameters: [String: String]? = nil) -> String {
+        var url = Bundle.main.baseWebUrl.url!
+        url.appendPathComponent(path)
+        if let parameters = parameters {
+            url.appendQueryParameters(parameters)
+        }
+        return url.absoluteString.removingSuffix("?")
+    }
+    
     public func parse(_ target: String) -> Any? {
         if let compatible = self as? HiNavCompatible {
             return compatible.resolution(target)
