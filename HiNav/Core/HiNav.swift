@@ -101,7 +101,7 @@ final public class HiNav {
     
     init() { }
     
-    public func deepLink(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
+    public func appURLString(host: HiNavHost, path: HiNavPath? = nil, parameters: [String: String]? = nil) -> String {
         var url = "\(Bundle.main.urlScheme() ?? "")://\(host)".url!
         if let path = path {
             url.appendPathComponent(path)
@@ -112,7 +112,7 @@ final public class HiNav {
         return url.absoluteString.removingSuffix("?")
     }
     
-    public func deepLink(path: String, parameters: [String: String]? = nil) -> String {
+    public func webURLString(path: String, parameters: [String: String]? = nil) -> String {
         var url = Bundle.main.baseWebUrl.url!
         url.appendPathComponent(path)
         if let parameters = parameters {
@@ -134,18 +134,18 @@ final public class HiNav {
         if type != nil {
             parameters[Parameter.type] = type!.rawValue.string
         }
-        return deepLink(host: .back, parameters: parameters)
+        return appURLString(host: .back, parameters: parameters)
     }
     
     // MARK: - toast
     public func toastActivityDeepLink(_ active: Bool) -> String {
-        deepLink(host: .toast, parameters: [
+        appURLString(host: .toast, parameters: [
             Parameter.active: active.string
         ])
     }
     
     public func toastMessageDeepLink(_ message: String, active: Bool? = nil) -> String {
-        deepLink(host: .toast, parameters: [
+        appURLString(host: .toast, parameters: [
             Parameter.message: message
         ])
     }
@@ -164,7 +164,7 @@ final public class HiNav {
         if jsonString.isNotEmpty {
             parameters[Parameter.actions] = jsonString
         }
-        return deepLink(host: .alert, parameters: parameters)
+        return appURLString(host: .alert, parameters: parameters)
     }
     
     // MARK: - sheet
@@ -181,7 +181,7 @@ final public class HiNav {
         if jsonString.isNotEmpty {
             parameters[Parameter.actions] = jsonString
         }
-        return deepLink(host: .sheet, parameters: parameters)
+        return appURLString(host: .sheet, parameters: parameters)
     }
     
     // MARK: - popup
@@ -193,7 +193,7 @@ final public class HiNav {
         if data?.isNotEmpty ?? false {
             parameters[Parameter.data] = data!
         }
-        return deepLink(host: .popup, parameters: parameters)
+        return appURLString(host: .popup, parameters: parameters)
     }
     
     // MARK: - logic
@@ -205,7 +205,7 @@ final public class HiNav {
         if data?.isNotEmpty ?? false {
             parameters[Parameter.data] = data!
         }
-        return deepLink(host: .logic, parameters: parameters)
+        return appURLString(host: .logic, parameters: parameters)
     }
     
     // MARK: - login
