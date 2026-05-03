@@ -87,7 +87,6 @@ public protocol HiNavCompatible {
     func allowedPaths(host: HiNavHost) -> [HiNavPath]
     
     // user-login
-    func isLogined() -> Bool
     func needLogin(host: HiNavHost, path: HiNavPath?) -> Bool
     
     // target解析
