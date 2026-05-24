@@ -239,7 +239,7 @@ public extension NavigatorProtocol {
         var isLogined = true
         let router = HiNav.shared
         if let compatible = router as? HiNavCompatible {
-            isLogined = compatible.isLogined()
+            isLogined = Appdata.shared.alreadyLoggedIn
             if compatible.needLogin(host: host, path: url.path) {
                 needLogin = true
             }
@@ -256,11 +256,7 @@ public extension NavigatorProtocol {
                     print("自动跳转登录页(错误): \(error)")
                 }, onCompleted: {
                     print("自动跳转登录页(完成)")
-                    var hasLogined = false
-                    if let compatible = router as? HiNavCompatible {
-                        hasLogined = compatible.isLogined()
-                    }
-                    if hasLogined {
+                    if Appdata.shared.alreadyLoggedIn {
                         self.jump(url, context: context, wrap: wrap, fromNav: fromNav, fromVC: fromVC, animated: animated, completion: completion)
                     }
                 }).disposed(by: navigateBag)
