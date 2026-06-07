@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'HiNav'
-  s.version          = '1.2.1'
+  s.version          = '1.2.2'
   s.summary          = 'Nav module.'
   s.description      = <<-DESC
 						Nav module using Swift.
@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   
   s.subspec 'Core' do |ss|
     ss.source_files = 'HiNav/Core/**/*'
-  	ss.dependency 'HiBase', '~> 1.0'
+  	ss.dependency 'HiBase', '~> 1.2.0'
     ss.dependency 'SwifterSwift/UIKit', '~> 8.0'
   end
   
